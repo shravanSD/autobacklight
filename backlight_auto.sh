@@ -20,6 +20,8 @@ CURRENT_TIME="$(date '+%H%M%S')"
 TIME_ON_min=170000
 TIME_ON_max=200000
 TIME_OFF=60000
+USER_TURNOFF_min="$(tail -n1 backlight.log | grep 18000 | awk '{print $5}' | sed 's/\.//g')"
+USER_TURNOFF_max="$(tail -n1 backlight.log | grep 20000 | awk '{print $5}' | sed 's/\.//g')"
 LOG_FILE=/var/log/backlight.log
 
 if [ "$CURRENT_TIME" -gt "$TIME_OFF" ]; then
@@ -27,13 +29,17 @@ if [ "$CURRENT_TIME" -gt "$TIME_OFF" ]; then
 		echo 0 > /sys/class/leds/dell::kbd_backlight/brightness
 		echo "$(date +%H%M%S)": Backlight set to 0. >> $LOG_FILE
 	fi
-elif [ "$CURRENT_TIME" -gt "$TIME_ON_min" && "$CURRENT_TIME" -lt "$TIME_ON_max" ]; then
-	if [ ! "$CURRENT_VALUE" -eq 1 ]; then
+elif [ "$CURRENT_TIME" -gt "$TIME_ON_min" ] && [ "$CURRENT_TIME" -lt "$TIME_ON_max" ]; then
+	if [ ! "$CURRENT_VALUE" -eq 1 ] && [ "$USER_TURNOFF_min" -eq 1 ]; then
+		echo 0 > /dev/null
+	else
 		echo 1 > /sys/class/leds/dell::kbd_backlight/brightness
 		echo "$(date +%H%M%S)": Backlight set to 1. >> $LOG_FILE
 	fi
 elif [ "$CURRENT_TIME" -gt "$TIME_ON_max" ]; then
-	if [ ! "$CURRENT_VALUE" -eq 100 ]; then
+	if [ ! "$CURRENT_VALUE" -eq 100 ] && [ "$USER_TURNOFF_max" -eq 100 ]; then
+                echo 0 > /dev/null
+        else
 		echo 100 > /sys/class/leds/dell::kbd_backlight/brightness
 		echo "$(date +%H%M%S)": Backlight set to 100. >> $LOG_FILE
 	fi
